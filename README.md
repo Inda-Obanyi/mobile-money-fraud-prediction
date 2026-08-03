@@ -17,6 +17,14 @@ Mobile_Money_Fraud_Detection/
     └── features.pkl            # Serialized feature list for schema mapping
 ```
 
+## 📊 Data Setup
+
+Because the complete training dataset is too large to host on GitHub, it is excluded from source control. To run full local evaluations or retrain models:
+
+1. Download the PaySim dataset directly from Kaggle or your data source.
+2. Place the file inside your project root directory.
+3. Ensure it is named exactly: `paysim dataset.csv`
+
 ## 🚀 Key Features
 
 * **Real-time Threat Scoring**: Inputs financial transactions and outputs localized fraud evaluations immediately.
