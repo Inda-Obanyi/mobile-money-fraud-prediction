@@ -35,11 +35,16 @@ Thumbs.db
 .env
 
 # ===========================
-# Model Files (Optional)
-# Uncomment if you don't want to upload models
+# Model Files & Saved Weights
 # ===========================
-# *.pkl
-# *.joblib
+*.pkl
+*.joblib
+
+# ===========================
+# Large Datasets
+# ===========================
+*.csv
+paysim dataset.csv
 
 # ===========================
 # Logs
