@@ -1,153 +1,468 @@
-# =====================================
-# Mobile Money Fraud Detection System
-# Streamlit Application
-# =====================================
+# ======================================================
+# Mobile Money Fraud Detection Dashboard
+# Streamlit Application Version 2
+# ======================================================
 
-# Import Libraries
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
 
-# =====================================
-# Load Saved Model Components (Cached)
-# =====================================
-@st.cache_resource
-def load_assets():
-    model = joblib.load("fraud_detection_model/final_fraud_model.pkl")
-    scaler = joblib.load("fraud_detection_model/scaler.pkl")
-    features = joblib.load("fraud_detection_model/features.pkl")
-    return model, scaler, features
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-model, scaler, features = load_assets()
 
-# =====================================
+
+# ======================================================
+# Load Model Components
+# ======================================================
+
+
+model = joblib.load(
+    "fraud_detection_model/final_fraud_model.pkl"
+)
+
+scaler = joblib.load(
+    "fraud_detection_model/scaler.pkl"
+)
+
+features = joblib.load(
+    "fraud_detection_model/features.pkl"
+)
+
+
+
+# ======================================================
 # Page Configuration
-# =====================================
+# ======================================================
+
+
 st.set_page_config(
-    page_title="Mobile Money Fraud Detection",
-    page_icon="💳",
+    page_title="FraudGuard AI",
+    page_icon="🛡️",
     layout="wide"
 )
 
-# =====================================
-# Application Title
-# =====================================
-st.title("💳 Mobile Money Fraud Detection System")
+
+
+# ======================================================
+# Header
+# ======================================================
+
+
+st.title("🛡️ FraudGuard AI")
+st.subheader(
+    "Mobile Money Fraud Detection & Monitoring Dashboard"
+)
+
+
 st.write(
-    """
-    This application uses a Machine Learning model
-    to detect potentially fraudulent mobile money transactions.
-    """
+"""
+An Artificial Intelligence system that analyzes mobile money
+transactions and identifies potential fraudulent activities.
+"""
 )
 
-# =====================================
-# Sidebar Information
-# =====================================
-st.sidebar.header("About")
-st.sidebar.info(
-    """
-    Machine Learning Fraud Detection System
 
-    Dataset:
-    PaySim Mobile Money Dataset
 
-    Model:
-    Optimized Machine Learning Classifier
-    """
+# ======================================================
+# Sidebar
+# ======================================================
+
+
+st.sidebar.title("Navigation")
+
+page = st.sidebar.radio(
+    "Select Module",
+    [
+        "Single Transaction Prediction",
+        "Batch Fraud Detection",
+        "Fraud Analytics Dashboard"
+    ]
 )
 
-# =====================================
-# User Input Section
-# =====================================
-st.header("Enter Transaction Details")
 
-col1, col2 = st.columns(2)
 
-with col1:
-    step = st.number_input("Transaction Step", min_value=1, value=1)
-    transaction_type = st.selectbox(
-        "Transaction Type",
-        ["CASH_IN", "CASH_OUT", "DEBIT", "PAYMENT", "TRANSFER"]
-    )
-    amount = st.number_input("Transaction Amount", min_value=0.0, value=10000.0)
-    oldbalanceOrg = st.number_input("Sender Old Balance", min_value=0.0, value=50000.0)
+# Transaction Type Mapping
 
-with col2:
-    newbalanceOrig = st.number_input("Sender New Balance", min_value=0.0, value=40000.0)
-    oldbalanceDest = st.number_input("Receiver Old Balance", min_value=0.0, value=0.0)
-    newbalanceDest = st.number_input("Receiver New Balance", min_value=0.0, value=10000.0)
-    isFlaggedFraud = st.selectbox("Is Flagged Fraud?", [0, 1])
-
-# =====================================
-# Feature Engineering
-# =====================================
-sender_balance_change = oldbalanceOrg - newbalanceOrig
-receiver_balance_change = newbalanceDest - oldbalanceDest
-sender_balance_error = oldbalanceOrg - amount - newbalanceOrig
-receiver_balance_error = oldbalanceDest + amount - newbalanceDest
-amount_balance_ratio = amount / oldbalanceOrg if oldbalanceOrg > 0 else 0
-large_transaction = 1 if amount > 200000 else 0
-
-# Encode transaction type
 type_mapping = {
-    "CASH_IN": 0,
-    "CASH_OUT": 1,
-    "DEBIT": 2,
-    "PAYMENT": 3,
-    "TRANSFER": 4
+
+"CASH_IN":0,
+"CASH_OUT":1,
+"DEBIT":2,
+"PAYMENT":3,
+"TRANSFER":4
+
 }
-transaction_type_encoded = type_mapping[transaction_type]
 
-# =====================================
-# Prediction Button
-# =====================================
-if st.button("🔍 Detect Fraud"):
 
-    input_data = pd.DataFrame({
-        "step": [step],
-        "type": [transaction_type_encoded],
-        "amount": [amount],
-        "oldbalanceOrg": [oldbalanceOrg],
-        "newbalanceOrig": [newbalanceOrig],
-        "oldbalanceDest": [oldbalanceDest],
-        "newbalanceDest": [newbalanceDest],
-        "sender_balance_change": [sender_balance_change],
-        "receiver_balance_change": [receiver_balance_change],
-        "sender_balance_error": [sender_balance_error],
-        "receiver_balance_error": [receiver_balance_error],
-        "amount_balance_ratio": [amount_balance_ratio],
-        "large_transaction": [large_transaction], 
-        "isFlaggedFraud": [isFlaggedFraud] 
-    })
 
-    # Arrange columns correctly
-    input_data = input_data[features]
+# ======================================================
+# FUNCTION: Prediction
+# ======================================================
 
-    # Scale input
-    input_scaled = scaler.transform(input_data)
 
-    # Prediction
-    prediction = model.predict(input_scaled)
-    probability = model.predict_proba(input_scaled)[0][1]
+def predict_transaction(data):
 
-    # =====================================
-    # Display Result
-    # =====================================
-    st.subheader("Prediction Result")
 
-    if int(prediction[0]) == 1:
-        st.error("🚨 Fraudulent Transaction Detected")
-    else:
-        st.success("✅ Legitimate Transaction")
+    data = data[features]
 
-    st.metric("Fraud Probability", f"{probability*100:.2f}%")
 
-    if probability < 0.3:
-        risk = "Low Risk"
-    elif probability < 0.7:
-        risk = "Medium Risk"
-    else:
-        risk = "High Risk"
+    scaled_data = scaler.transform(
+        data
+    )
 
-    st.info(f"Risk Level: {risk}")
+
+    prediction = model.predict(
+        scaled_data
+    )
+
+
+    probability = model.predict_proba(
+        scaled_data
+    )[:,1]
+
+
+    return prediction, probability
+
+
+
+# ======================================================
+# MODULE 1
+# Single Transaction Prediction
+# ======================================================
+
+
+if page == "Single Transaction Prediction":
+
+
+    st.header(
+        "🔍 Single Transaction Fraud Detection"
+    )
+
+
+    col1,col2 = st.columns(2)
+
+
+    with col1:
+
+        step = st.number_input(
+            "Transaction Step",
+            value=1
+        )
+
+
+        transaction_type = st.selectbox(
+            "Transaction Type",
+            list(type_mapping.keys())
+        )
+
+
+        amount = st.number_input(
+            "Transaction Amount",
+            value=10000.0
+        )
+
+
+        oldbalanceOrg = st.number_input(
+            "Sender Previous Balance",
+            value=50000.0
+        )
+
+
+
+    with col2:
+
+
+        newbalanceOrig = st.number_input(
+            "Sender New Balance",
+            value=40000.0
+        )
+
+
+        oldbalanceDest = st.number_input(
+            "Receiver Previous Balance",
+            value=0.0
+        )
+
+
+        newbalanceDest = st.number_input(
+            "Receiver New Balance",
+            value=10000.0
+        )
+
+
+
+    if st.button("🚨 Analyze Transaction"):
+
+
+        transaction = pd.DataFrame({
+
+        "step":[step],
+
+        "type":[
+            type_mapping[transaction_type]
+        ],
+
+        "amount":[amount],
+
+        "oldbalanceOrg":[oldbalanceOrg],
+
+        "newbalanceOrig":[newbalanceOrig],
+
+        "oldbalanceDest":[oldbalanceDest],
+
+        "newbalanceDest":[newbalanceDest],
+
+        "sender_balance_change":[
+            oldbalanceOrg-newbalanceOrig
+        ],
+
+        "receiver_balance_change":[
+            newbalanceDest-oldbalanceDest
+        ],
+
+        "sender_balance_error":[
+            oldbalanceOrg-amount-newbalanceOrig
+        ],
+
+        "receiver_balance_error":[
+            oldbalanceDest+amount-newbalanceDest
+        ],
+
+        "amount_balance_ratio":[
+            amount/oldbalanceOrg
+            if oldbalanceOrg>0 else 0
+        ],
+
+        "large_transaction":[
+            1 if amount>200000 else 0
+        ]
+
+        })
+
+
+        prediction, probability = predict_transaction(
+            transaction
+        )
+
+
+        st.divider()
+
+
+        if prediction[0]==1:
+
+            st.error(
+                "🚨 FRAUD DETECTED"
+            )
+
+        else:
+
+            st.success(
+                "✅ LEGITIMATE TRANSACTION"
+            )
+
+
+        st.metric(
+            "Fraud Probability",
+            f"{probability[0]*100:.2f}%"
+        )
+
+
+
+        if probability[0] <0.3:
+
+            st.info(
+                "Risk Level: LOW"
+            )
+
+        elif probability[0]<0.7:
+
+            st.warning(
+                "Risk Level: MEDIUM"
+            )
+
+        else:
+
+            st.error(
+                "Risk Level: HIGH"
+            )
+
+
+
+# ======================================================
+# MODULE 2
+# Batch Prediction
+# ======================================================
+
+
+elif page=="Batch Fraud Detection":
+
+
+    st.header(
+        "📂 Upload Transaction File"
+    )
+
+
+    file = st.file_uploader(
+        "Upload CSV File",
+        type="csv"
+    )
+
+
+    if file:
+
+
+        data = pd.read_csv(file)
+
+
+        st.write(
+            "Uploaded Data"
+        )
+
+        st.dataframe(
+            data.head()
+        )
+
+
+        if st.button(
+            "Run Fraud Detection"
+        ):
+
+
+            predictions, probabilities = predict_transaction(
+                data
+            )
+
+
+            data["Fraud Prediction"] = predictions
+
+            data["Fraud Probability"] = probabilities
+
+
+            data["Risk Level"] = pd.cut(
+                data["Fraud Probability"],
+                bins=[
+                    0,
+                    .3,
+                    .7,
+                    1
+                ],
+                labels=[
+                    "Low",
+                    "Medium",
+                    "High"
+                ]
+            )
+
+
+            st.success(
+                "Analysis Completed"
+            )
+
+
+            st.dataframe(
+                data.head()
+            )
+
+
+            csv = data.to_csv(
+                index=False
+            )
+
+
+            st.download_button(
+                "⬇ Download Report",
+                csv,
+                "fraud_report.csv",
+                "text/csv"
+            )
+
+
+
+# ======================================================
+# MODULE 3
+# Analytics Dashboard
+# ======================================================
+
+
+else:
+
+
+    st.header(
+        "📊 Fraud Analytics Dashboard"
+    )
+
+
+    uploaded = st.file_uploader(
+        "Upload Fraud Report",
+        type="csv"
+    )
+
+
+    if uploaded:
+
+
+        df = pd.read_csv(uploaded)
+
+
+        col1,col2,col3 = st.columns(3)
+
+
+        col1.metric(
+            "Total Transactions",
+            len(df)
+        )
+
+
+        col2.metric(
+            "Fraud Cases",
+            int(
+                df["Fraud Prediction"].sum()
+            )
+        )
+
+
+        col3.metric(
+            "Fraud Rate",
+            f"{df['Fraud Prediction'].mean()*100:.2f}%"
+        )
+
+
+
+        st.subheader(
+            "Fraud Distribution"
+        )
+
+
+        fig,ax = plt.subplots()
+
+
+        sns.countplot(
+            x="Fraud Prediction",
+            data=df,
+            ax=ax
+        )
+
+
+        st.pyplot(fig)
+
+
+
+        st.subheader(
+            "Risk Level Distribution"
+        )
+
+
+        fig,ax = plt.subplots()
+
+
+        sns.countplot(
+            x="Risk Level",
+            data=df,
+            ax=ax
+        )
+
+
+        st.pyplot(fig)
